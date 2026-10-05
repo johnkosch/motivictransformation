@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motivic Transformation</title>
+  <script src="https://www.verovio.org/javascript/latest/verovio-toolkit-wasm.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 20px;
+      text-align: center;
+      background: #f7f7f7;
+    }
+
+    h1 { margin: 0 0 10px; }
+
+    #instructions {
+      margin: 0 auto 16px;
+      font-size: 1.1rem;
+      max-width: 850px;
+      line-height: 1.45;
+    }
+
+    #score, #answerScore {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 18px auto;
+      height: 190px;
+      box-sizing: border-box;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #score {
+      width: 100%;
+    }
+
+    #answerScore {
+      width: 100%;
+    }
+
+    #score svg, #answerScore svg {
+      width: 50%;
+      max-width: 500px;
+      height: 150px;
+      max-height: 150px;
+      display: block;
+    }
+
+    #answerSection {
+      display: none;
+    }
+
+    #answerScore {
+      flex: 0 0 190px;
+    }
+
+    #answerLabel {
+      font-size: 1.05rem;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: center;
+      gap: 9px;
+      flex-wrap: nowrap;
+      margin: 14px auto;
+      max-width: 100%;
+    }
+
+    #noteButtons {
+      justify-content: flex-start;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 4px 8px 10px;
+      box-sizing: border-box;
+    }
+
+    .note-button, .control-button, #submitButton, #nextButton {
+      font-size: 1rem;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .note-button {
+      border: 2px solid #333;
+      background: white;
+      font-weight: bold;
+      min-width: 120px;
+      min-height: 108px;
+      padding: 7px 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .note-button:hover:not(:disabled) {
+      background: #eee;
+    }
+
+    .note-button svg {
+      width: 102px;
+      height: 88px;
+      display: block;
+      overflow: hidden;
+      transform: scale(1.35);
+      transform-origin: center center;
+    }
+
+    .button-notation {
+      width: 102px;
+      height: 88px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .note-button:hover:not(:disabled) {
+      background: #eee;
+    }
+
+    .control-button {
+      border: 1px solid #777;
+      background: #fff;
+    }
+
+    .control-button:hover:not(:disabled) {
+      background: #eee;
+    }
+
+    #submitButton {
+      border: none;
+      background: #2e9b57;
+      color: white;
+      font-weight: bold;
+      min-width: 130px;
+    }
+
+    #submitButton:hover:not(:disabled) {
+      background: #267e46;
+    }
+
+    #nextButton {
+      border: none;
+      background: #333;
+      color: white;
+      font-weight: bold;
+      min-width: 120px;
+    }
+
+    #nextButton:hover:not(:disabled) {
+      background: #222;
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: .55;
+    }
+
+    #answerList {
+      min-height: 32px;
+      margin: 8px auto;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    #feedback {
+      min-height: 32px;
+      margin: 12px;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    #description {
+      margin-top: 14px;
+      font-size: .92rem;
+      color: #555;
+    }
+
+    .correct {
+      color: #16803c;
+    }
+
+    .incorrect {
+      color: #b42318;
+    }
+  
+    #voiceoverControls {
+      margin-bottom: 14px;
+    }
+
+    .voiceover-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .voiceover-controls label {
+      font-weight: 600;
+    }
+
+    .voiceover-controls button {
+      padding: 7px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid #000;
+      outline-offset: 3px;
+    }
+
+    #voiceoverStatus {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+</style>
+</head>
+
+<body>
+  <h1>Motivic Transformation</h1>
+
+
+  <div class="voiceover-controls" id="voiceoverControls">
+    <label for="voiceoverToggle">
+      <input type="checkbox" id="voiceoverToggle" checked>
+      Voiceover
+    </label>
+    <button type="button" id="repeatPromptButton">Repeat prompt</button>
+  </div>
+
+
+  <div id="instructions">
+    <strong id="transformationPrompt">Transform the rhythm.</strong>
+<div id="voiceoverStatus" aria-live="polite"></div>
+    Construct the resulting rhythm using the note-value buttons below.
+  </div>
+
+  <div id="score" aria-label="Original six-beat rhythm"></div>
+
+  <div id="answerSection">
+    <div id="answerLabel">Your answer:</div>
+
+    <div id="answerScore" aria-label="Student's constructed rhythm"></div>
+
+    <div id="answerList" aria-live="polite"></div>
+
+    <div class="button-row" id="noteButtons"></div>
+
+    <div class="button-row">
+      <button class="control-button" id="undoButton">Undo</button>
+      <button class="control-button" id="clearButton">Clear</button>
+      <button id="submitButton">Submit</button>
+    </div>
+
+    <div id="feedback" aria-live="polite"></div>
+  </div>
+
+  <button id="nextButton">Next</button>
+
+  <div id="description">
+    Augmentation doubles every note value. Diminution halves every note value.
+    Retrograde reverses the order of the note values. Extension adds at least
+    one note value after the original rhythm. Truncation removes at least one
+    note value from the end while preserving the original order.
+  </div>
+
+<script>
+let vrvToolkit;
+let currentExercise = null;
+let studentAnswer = [];
+let answered = false;
+let previousSignature = null;
+
+/* ============================================================
+   RHYTHM VOCABULARY
+   ============================================================ */
+
+const R = {
+  h: {
+    id: "half",
+    name: "half note",
+    duration: 8,
+    mei: '<note pname="c" oct="4" dur="2"/>'
+  },
+  q: {
+    id: "quarter",
+    name: "quarter note",
+    duration: 4,
+    mei: '<note pname="c" oct="4" dur="4"/>'
+  },
+  e: {
+    id: "eighth",
+    name: "eighth note",
+    duration: 2,
+    mei: '<note pname="c" oct="4" dur="8"/>'
+  },
+  dQ: {
+    id: "dotted-quarter",
+    name: "dotted quarter",
+    duration: 6,
+    mei: '<note pname="c" oct="4" dur="4" dots="1"/>'
+  }
+};
+
+const simpleFragments = [
+  { id: "half", items: [R.h] },
+  { id: "quarters", items: [R.q, R.q] },
+  { id: "quarter-eighths", items: [R.q, R.e, R.e] },
+  { id: "eighths-quarter", items: [R.e, R.e, R.q] },
+  { id: "dotted-quarter-eighth", items: [R.dQ, R.e] },
+  { id: "eighth-dotted-quarter", items: [R.e, R.dQ] },
+  { id: "four-eighths", items: [R.e, R.e, R.e, R.e] }
+];
+
+const notePalette = [
+  R.e,
+  R.dE = {
+    id: "dotted-eighth",
+    name: "dotted eighth",
+    duration: 3,
+    mei: '<note pname="c" oct="4" dur="8" dots="1"/>'
+  },
+  R.q,
+  R.dQ,
+  R.h,
+  R.dH = {
+    id: "dotted-half",
+    name: "dotted half",
+    duration: 12,
+    mei: '<note pname="c" oct="4" dur="2" dots="1"/>'
+  },
+  R.w = {
+    id: "whole",
+    name: "whole note",
+    duration: 16,
+    mei: '<note pname="c" oct="4" dur="1"/>'
+  },
+  R.s = {
+    id: "sixteenth",
+    name: "sixteenth note",
+    duration: 1,
+    mei: '<note pname="c" oct="4" dur="16"/>'
+  }
+];
+
+/* Display order requested by the user. */
+const paletteOrder = [
+  R.s, R.e, R.dE, R.q, R.dQ, R.h, R.dH, R.w
+];
+
+function randomChoice(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+/* ============================================================
+   EXERCISE GENERATION
+   ============================================================ */
+
+function makeSixBeatRhythm() {
+  let fragments;
+
+  do {
+    fragments = [
+      randomChoice(simpleFragments),
+      randomChoice(simpleFragments),
+      randomChoice(simpleFragments)
+    ];
+  } while (
+    fragments.some(fragment =>
+      fragments.filter(other => other.id === fragment.id).length >= 3
+    )
+  );
+
+  return fragments;
+}
+
+function flattenRhythm(fragments) {
+  return fragments.flatMap(fragment => fragment.items);
+}
+
+function exerciseSignature(fragments) {
+  return fragments.map(fragment => fragment.id).join("|");
+}
+
+function generateRhythm() {
+  let fragments;
+  let signature;
+  let attempts = 0;
+
+  do {
+    fragments = makeSixBeatRhythm();
+    signature = exerciseSignature(fragments);
+    attempts++;
+  } while (signature === previousSignature && attempts < 100);
+
+  previousSignature = signature;
+  return fragments;
+}
+
+/* ============================================================
+   TRANSFORMATION LOGIC
+   ============================================================ */
+
+function transformItem(item, direction) {
+  const factor = direction === "augment" ? 2 : 0.5;
+  const targetDuration = item.duration * factor;
+
+  const match = paletteOrder.find(note => note.duration === targetDuration);
+
+  if (!match) {
+    throw new Error(
+      `No available note value for ${item.name} after transformation.`
+    );
+  }
+
+  return match;
+}
+
+function makeTargetAnswer(fragments, direction) {
+  const original = flattenRhythm(fragments);
+
+  if (direction === "retrograde") {
+    /*
+      Retrograde reverses the order of the rhythmic values.
+      The individual note values themselves are unchanged.
+    */
+    return [...original].reverse();
+  }
+
+  if (direction === "extension") {
+    /*
+      Extension is open-ended: the original rhythm remains intact,
+      and the student adds at least one additional note value.
+      There is therefore no single target answer.
+    */
+    return original;
+  }
+
+  if (direction === "truncation") {
+    /*
+      Truncation is also open-ended: the student must retain an
+      in-order prefix but omit at least one value from the end.
+    */
+    return original;
+  }
+
+  return original.map(item => transformItem(item, direction));
+}
+
+function isExtensionAnswer(answer, original) {
+  /*
+    Must contain the complete original sequence as its prefix
+    and contain at least one additional note value.
+  */
+  if (answer.length <= original.length) return false;
+
+  return original.every((item, index) =>
+    answer[index].id === item.id
+  );
+}
+
+function isTruncationAnswer(answer, original) {
+  /*
+    Must be a proper prefix of the original sequence.
+    At least one original value must be omitted from the end.
+  */
+  if (answer.length >= original.length || answer.length === 0) return false;
+
+  return answer.every((item, index) =>
+    item.id === original[index].id
+  );
+}
+
+/* ============================================================
+   VEROVIO RENDERING
+   ============================================================ */
+
+/*
+  In simple meter, beam according to quarter-note beat boundaries.
+
+  We track duration in eighth-note units:
+    sixteenth = 1
+    eighth = 2
+    dotted eighth = 3
+    quarter = 4
+    dotted quarter = 6
+    half = 8
+    dotted half = 12
+    whole = 16
+
+  For the rhythms in this app, a beat is 4 eighth-note units.
+  Thus:
+    quarter + eighth + eighth
+      -> quarter | beamed eighth-eighth
+
+    eighth + eighth + quarter
+      -> beamed eighth-eighth | quarter
+
+    dotted quarter + eighth
+      -> dotted quarter | eighth
+
+    eighth + dotted quarter
+      -> eighth | dotted quarter
+
+  This prevents a run of four eighth notes from becoming one
+  continuous beam across the beat boundary.
+*/
+function itemsToMEI(items) {
+  let output = "";
+  let beam = [];
+  let beatUnits = 0;
+
+  function flush() {
+    if (beam.length >= 2) {
+      output += "<beam>" + beam.map(item => item.mei).join("") + "</beam>";
+    } else {
+      output += beam.map(item => item.mei).join("");
+    }
+    beam = [];
+  }
+
+  function addItem(item) {
+    const shortEnoughForBeam =
+      item.id === "eighth" ||
+      item.id === "sixteenth" ||
+      item.id === "dotted-eighth";
+
+    /*
+      A dotted eighth can cross an internal subdivision but does not
+      belong to a beam that would cross the quarter-note beat.
+    */
+    if (!shortEnoughForBeam) {
+      flush();
+      output += item.mei;
+      beatUnits += item.duration;
+    } else {
+      /*
+        If this item would carry us past the current quarter-note beat,
+        end the current beam first.
+      */
+      if (beatUnits > 0 && beatUnits + item.duration > 4) {
+        flush();
+        beatUnits = 0;
+      }
+
+      beam.push(item);
+      beatUnits += item.duration;
+
+      /*
+        A completed quarter-note beat ends the beam.
+      */
+      if (beatUnits === 4) {
+        flush();
+        beatUnits = 0;
+      }
+    }
+  }
+
+  items.forEach(addItem);
+  flush();
+
+  return output;
+}
+
+function fragmentsToMEI(fragments) {
+  return fragments
+    .map(fragment => itemsToMEI(fragment.items))
+    .join('<space dur="0"/>');
+}
+
+function makeScoreMEIFromFragments(fragments) {
+  return `
+  <mei xmlns="http://www.music-encoding.org/ns/mei">
+    <music>
+      <body>
+        <mdiv>
+          <score>
+            <scoreDef>
+              <staffGrp>
+                <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+              </staffGrp>
+            </scoreDef>
+            <section>
+              <measure n="1">
+                <staff n="1">
+                  <layer n="1">
+                    ${fragmentsToMEI(fragments)}
+                  </layer>
+                </staff>
+              </measure>
+            </section>
+          </score>
+        </mdiv>
+      </body>
+    </music>
+  </mei>`;
+}
+
+function makeScoreMEIFromItems(items) {
+  return `
+  <mei xmlns="http://www.music-encoding.org/ns/mei">
+    <music>
+      <body>
+        <mdiv>
+          <score>
+            <scoreDef>
+              <staffGrp>
+                <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+              </staffGrp>
+            </scoreDef>
+            <section>
+              <measure n="1">
+                <staff n="1">
+                  <layer n="1">
+                    ${itemsToMEI(items)}
+                  </layer>
+                </staff>
+              </measure>
+            </section>
+          </score>
+        </mdiv>
+      </body>
+    </music>
+  </mei>`;
+}
+
+function makeSingleNoteMEI(note) {
+  /*
+    Verovio needs a valid staff for engraving, but the button CSS
+    crops the resulting SVG so the visible result is just the
+    rhythmic symbol. No clef or time signature is defined.
+  */
+  return `
+  <mei xmlns="http://www.music-encoding.org/ns/mei">
+    <music>
+      <body>
+        <mdiv>
+          <score>
+            <scoreDef>
+              <staffGrp>
+                <staffDef n="1" lines="5"/>
+              </staffGrp>
+            </scoreDef>
+            <section>
+              <measure n="1">
+                <staff n="1">
+                  <layer n="1">
+                    ${note.mei}
+                  </layer>
+                </staff>
+              </measure>
+            </section>
+          </score>
+        </mdiv>
+      </body>
+    </music>
+  </mei>`;
+}
+
+function renderMEI(target, mei, options = {}) {
+  vrvToolkit.setOptions({
+    scale: options.button ? 70 : 55,
+    adjustPageHeight: true,
+    pageWidth: options.button ? 500 : 1900,
+    pageHeight: options.button ? 500 : 850,
+    breaks: "none",
+    footer: "none",
+    header: "none",
+    spacingLinear: 1.1,
+    spacingNonLinear: 1.1
+  });
+
+  target.innerHTML = vrvToolkit.renderData(mei, {});
+}
+
+function renderOriginal(fragments) {
+  renderMEI(
+    document.getElementById("score"),
+    makeScoreMEIFromFragments(fragments)
+  );
+}
+
+function renderAnswer() {
+  const target = document.getElementById("answerScore");
+
+  if (studentAnswer.length === 0) {
+    target.innerHTML = "";
+    return;
+  }
+
+  renderMEI(target, makeScoreMEIFromItems(studentAnswer));
+}
+
+/* ============================================================
+   STUDENT ANSWER CONSTRUCTION
+   ============================================================ */
+
+let suppressNextButtonFocusSpeech = false;
+
+function playClickSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    const ctx = new AudioContext();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = 800;
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.06);
+    oscillator.addEventListener("ended", () => ctx.close());
+  } catch (e) {}
+}
+
+function buildPalette() {
+  const container = document.getElementById("noteButtons");
+  container.innerHTML = "";
+
+  paletteOrder.forEach(note => {
+    const button = document.createElement("button");
+    button.className = "note-button";
+    button.type = "button";
+    button.setAttribute("aria-label", note.name);
+    button.title = note.name;
+
+    button.addEventListener("focus", () => {
+      if (suppressNextButtonFocusSpeech) {
+        suppressNextButtonFocusSpeech = false;
+        return;
+      }
+
+      if (voiceoverToggle.checked) {
+        speak(note.name);
+      }
+    });
+
+    button.addEventListener("mousedown", () => {
+      suppressNextButtonFocusSpeech = true;
+    });
+
+    button.addEventListener("mouseenter", () => {
+      if (voiceoverToggle.checked) {
+        speak(note.name);
+      }
+    });
+
+    /*
+      Render the actual note value rather than a text label.
+      The aria-label/title preserves accessibility and mouse-hover
+      identification.
+    */
+    const notation = document.createElement("span");
+    notation.className = "button-notation";
+
+    renderMEI(
+      notation,
+      makeSingleNoteMEI(note),
+      { button: true }
+    );
+
+    button.appendChild(notation);
+    button.addEventListener("click", () => addNote(note));
+    container.appendChild(button);
+  });
+}
+
+function addNote(note) {
+      playClickSound();
+      suppressNextButtonFocusSpeech = false;
+  if (answered) return;
+
+  studentAnswer.push(note);
+  updateAnswerDisplay();
+}
+
+function undo() {
+  if (answered || studentAnswer.length === 0) return;
+
+  studentAnswer.pop();
+  updateAnswerDisplay();
+}
+
+function clearAnswer() {
+  if (answered) return;
+
+  studentAnswer = [];
+  updateAnswerDisplay();
+}
+
+function updateAnswerDisplay() {
+  document.getElementById("answerList").textContent =
+    studentAnswer.length
+      ? studentAnswer.map(note => note.name).join("  |  ")
+      : "Click note values to construct your answer.";
+
+  renderAnswer();
+}
+
+/* ============================================================
+   CHECKING
+   ============================================================ */
+
+function arraysMatch(a, b) {
+  if (a.length !== b.length) return false;
+
+  return a.every((item, index) => item.id === b[index].id);
+}
+
+function checkAnswer() {
+  if (answered) return;
+
+  const original = flattenRhythm(currentExercise.fragments);
+  const target = makeTargetAnswer(
+    currentExercise.fragments,
+    currentExercise.direction
+  );
+
+  let correct = false;
+
+  if (currentExercise.direction === "extension") {
+    correct = isExtensionAnswer(studentAnswer, original);
+  } else if (currentExercise.direction === "truncation") {
+    correct = isTruncationAnswer(studentAnswer, original);
+  } else {
+    correct = arraysMatch(studentAnswer, target);
+  }
+
+  if (voiceoverToggle.checked) {
+    speak(correct ? "Correct" : "Incorrect");
+  }
+
+  answered = true;
+
+  const feedback = document.getElementById("feedback");
+
+  if (correct) {
+    feedback.textContent = "Correct!";
+    feedback.className = "correct";
+  } else {
+    feedback.textContent =
+      currentExercise.direction === "extension"
+        ? "Not quite. Keep the complete original rhythm in order, then add at least one note value."
+        : currentExercise.direction === "truncation"
+          ? "Not quite. Keep the original rhythm in order, but omit at least one note value from the end."
+          : "Not quite. The correct transformed rhythm is shown below.";
+
+    feedback.className = "incorrect";
+
+    /*
+      Only transformations with a single determinate answer
+      reveal that answer automatically.
+    */
+    if (
+      currentExercise.direction !== "extension" &&
+      currentExercise.direction !== "truncation"
+    ) {
+      studentAnswer = target.slice();
+      updateAnswerDisplay();
+    }
+  }
+
+  document.querySelectorAll(".note-button, .control-button").forEach(
+    button => button.disabled = true
+  );
+
+  document.getElementById("submitButton").disabled = true;
+}
+
+/* ============================================================
+   NEW EXERCISE
+   ============================================================ */
+
+
+// ---------- Voiceover and keyboard accessibility ----------
+const voiceoverToggle = document.getElementById("voiceoverToggle");
+const voiceoverStatus = document.getElementById("voiceoverStatus");
+
+function speak(text) {
+  if (!voiceoverToggle || !voiceoverToggle.checked) return;
+  if (!("speechSynthesis" in window)) {
+    if (voiceoverStatus) voiceoverStatus.textContent =
+      "Voiceover is not available in this browser.";
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
+}
+
+function rhythmForSpeech(fragments) {
+  if (!fragments || !fragments.length) return "";
+
+  const items = fragments.flatMap(fragment => fragment.items || []);
+  if (!items.length) return "";
+
+  const names = {
+    "sixteenth": "sixteenth note",
+    "eighth": "eighth note",
+    "dotted eighth": "dotted eighth note",
+    "quarter": "quarter note",
+    "dotted quarter": "dotted quarter note",
+    "half": "half note",
+    "dotted half": "dotted half note",
+    "whole": "whole note"
+  };
+
+  const groups = [];
+  for (const item of items) {
+    const name = names[item.name] || item.name || "note";
+    const last = groups[groups.length - 1];
+
+    if (last && last.name === name) {
+      last.count++;
+    } else {
+      groups.push({ name, count: 1 });
+    }
+  }
+
+  const spokenGroups = groups.map(group => {
+    if (group.count === 1) return "a " + group.name;
+    return numberWord(group.count) + " " + group.name.replace(" note", " notes");
+  });
+
+  return spokenGroups.join(", ");
+}
+
+function numberWord(number) {
+  const words = {
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight"
+  };
+  return words[number] || String(number);
+}
+
+function currentPromptSpeech() {
+  const prompt = document.getElementById("transformationPrompt");
+  if (!prompt) return "";
+
+  const instruction = prompt.textContent.replace(/\s+/g, " ").trim();
+  const rhythm = rhythmForSpeech(
+    currentExercise && currentExercise.fragments
+  );
+
+  let text = instruction;
+  if (rhythm) {
+    text += " The rhythm is " + rhythm + ".";
+  }
+
+  return text;
+}
+
+function speakPrompt() {
+  const text = currentPromptSpeech();
+  if (!text) return;
+  if (voiceoverStatus) voiceoverStatus.textContent = text;
+  speak(text);
+}
+
+function noteNameForSpeech(note) {
+  const names = {
+    "sixteenth": "sixteenth note",
+    "eighth": "eighth note",
+    "dotted eighth": "dotted eighth note",
+    "quarter": "quarter note",
+    "dotted quarter": "dotted quarter note",
+    "half": "half note",
+    "dotted half": "dotted half note",
+    "whole": "whole note"
+  };
+  return names[note.name] || note.name;
+}
+
+if (repeatPromptButton) {
+  repeatPromptButton.addEventListener("click", speakPrompt);
+}
+
+if (voiceoverToggle) {
+  voiceoverToggle.addEventListener("change", () => {
+    if (voiceoverToggle.checked) {
+      speakPrompt();
+    } else if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    window.speechSynthesis.cancel();
+    userAnswer = [];
+    renderAnswer();
+    return;
+  }
+
+  if (event.key === "Backspace" || event.key === "Delete") {
+    event.preventDefault();
+    if (userAnswer.length > 0) {
+      userAnswer.pop();
+      renderAnswer();
+    }
+    return;
+  }
+
+  if (event.code === "Space" || event.key === " ") {
+    event.preventDefault();
+    const nextButton = document.getElementById("nextButton");
+    if (nextButton && !nextButton.disabled) {
+      nextButton.click();
+    }
+    return;
+  }
+
+  if (event.key === "Enter" || event.key === "Return") {
+    event.preventDefault();
+    if (voiceoverToggle.checked) {
+      speakPrompt();
+    }
+    return;
+  }
+
+  // Escape stops speech without changing the exercise.
+  if (event.key === "Escape" && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+    return;
+  }
+
+  // Number keys 1–8 activate the corresponding note-value button.
+  // This supplements, rather than replaces, normal Tab/Enter/Space operation.
+  if (/^[1-8]$/.test(event.key)) {
+    const index = Number(event.key) - 1;
+    const buttons = Array.from(document.querySelectorAll(".note-button"));
+    if (buttons[index]) {
+      event.preventDefault();
+      buttons[index].click();
+      buttons[index].focus();
+    }
+  }
+});
+
+
+function newExercise() {
+
+  currentExercise = {
+    fragments: generateRhythm(),
+    direction: randomChoice([
+      "augment",
+      "diminish",
+      "retrograde",
+      "extension",
+      "truncation"
+    ])
+  };
+
+  studentAnswer = [];
+  answered = false;
+
+  const promptText = {
+    augment: "Augment the rhythm.",
+    diminish: "Diminish the rhythm.",
+    retrograde: "Put the rhythm in retrograde.",
+    extension: "Extend the rhythm.",
+    truncation: "Truncate the rhythm."
+  };
+
+  document.getElementById("transformationPrompt").textContent =
+    promptText[currentExercise.direction];
+
+  document.getElementById("answerSection").style.display = "block";
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "";
+  document.getElementById("submitButton").disabled = false;
+
+  document.querySelectorAll(".note-button, .control-button").forEach(
+    button => button.disabled = false
+  );
+
+  updateAnswerDisplay();
+  renderOriginal(currentExercise.fragments);
+
+  // The first exercise is spoken after the student's first interaction.
+  // This avoids browser restrictions on speech that starts before user input.
+  if (!window.__voiceoverPrimed) {
+    const primeVoiceover = () => {
+      if (window.__voiceoverPrimed) return;
+      window.__voiceoverPrimed = true;
+      if (voiceoverToggle && voiceoverToggle.checked) {
+        // Keep speechSynthesis.speak() inside the actual user event.
+        // A delayed call can lose the browser's user-activation permission.
+        speakPrompt();
+      }
+      document.removeEventListener("keydown", primeVoiceover);
+      document.removeEventListener("pointerdown", primeVoiceover);
+    };
+    document.addEventListener("keydown", primeVoiceover, { once: false });
+    document.addEventListener("pointerdown", primeVoiceover, { once: false });
+  } else {
+    speakPrompt();
+  }
+}
+
+document.getElementById("undoButton").addEventListener("click", undo);
+document.getElementById("clearButton").addEventListener("click", clearAnswer);
+document.getElementById("submitButton").addEventListener("mouseenter", () => {
+  if (voiceoverToggle.checked) {
+    speak("Submit");
+  }
+});
+
+document.getElementById("submitButton").addEventListener("click", checkAnswer);
+
+document.getElementById("nextButton").addEventListener("mouseenter", () => {
+  if (voiceoverToggle.checked) {
+    speak("Next");
+  }
+});
+
+
+document.getElementById("nextButton").addEventListener("click", newExercise);
+
+verovio.module.onRuntimeInitialized = function () {
+  vrvToolkit = new verovio.toolkit();
+  buildPalette();
+  newExercise();
+};
+</script>
+</body>
+</html>
